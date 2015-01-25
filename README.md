@@ -24,6 +24,17 @@ disableBrowserShortcutKeys({
 });  
 ```
 
+## Shortcut Keys Reference
+IE9  
+http://windows.microsoft.com/ja-jp/internet-explorer/ie-keyboard-shortcuts#ie=ie-9  
+IE10  
+http://windows.microsoft.com/ja-jp/internet-explorer/ie-keyboard-shortcuts#ie=ie-10  
+Chrome  
+https://support.google.com/chrome/answer/157179?hl=ja  
+Firefox  
+https://support.mozilla.org/ja/kb/keyboard-shortcuts-perform-firefox-tasks-quickly  
+
+
 ## Callback function
 You can set callback function to second parameter.
 ```js
