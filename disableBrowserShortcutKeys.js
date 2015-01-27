@@ -4,7 +4,6 @@
 function disableBrowserShortcutKeys(shortcutsLists, callback) {
 
     // issues memo wrote by my native language.
-    // TODO keyCode →　string 変換を完璧にする。一部記号が不完全。
     // TODO 特殊キーの複数パターン(exp. pgup,pageup,page_up)の入力に対応。
     // TODO keyInfoListあたりのクラスをきれいにする。
     // TODO targetがinput だった場合の処理分けをちゃんと整理する。disable時など
@@ -28,6 +27,22 @@ function disableBrowserShortcutKeys(shortcutsLists, callback) {
         "/":"?",
         "\\":"_"
     };
+
+    var special_chars = {
+        '186': ':',
+        '187': ';',
+        '188': ',',
+        '189': '-',
+        '190': '.',
+        '191': '/',
+        '192': '@',
+        '219': '[',
+        '220': '\\',
+        '221': ']',
+        '222': '^',
+        '226': '_' //For backslash key. Japanese keyboards have two backslash key. So we need separate the symbol for them.
+    };
+
     //Special Keys - and their codes
     // TODO: make work multiple pattern of special keys. Now, only first pattern works.
     var special_keys = {
@@ -117,7 +132,7 @@ function disableBrowserShortcutKeys(shortcutsLists, callback) {
             if (e.preventDefault) e.preventDefault();
             if (e.stopPropagation) e.stopPropagation();
             else e.returnValue = false;
-            callback(browserName, keyInfo.original, e);//TODO; set browserName in original format. Now, it's set after called toLowerCase();
+            if(callback) callback(browserName, keyInfo.original, e); //TODO; set browserName in original format. Now, it's set after called toLowerCase();
             return false;
         };
 
@@ -131,7 +146,7 @@ function disableBrowserShortcutKeys(shortcutsLists, callback) {
      * parseTargetは内包して、
      * コンストラクタでshortcutを受け取って、parseTargetして自分に値をセットすべき。
      * @param mainKey exp. "a", "+", "F1", "Esc", "Tab", "Backspace", or "Up"
-     * @param subKeys the keys information pressed with.  { ctrlKey; Boolean, altKey: Boolean, shiftKey: Boolean, meta; Boolean}
+     * @param subKeys the keys information pressed with.  { ctrlKey; Boolean, altKey: Boolean, shiftKey: Boolean, metaKey; Boolean}
      * @param numOfKeyPress number of keys to expected
      * @constructor
      */
@@ -141,7 +156,7 @@ function disableBrowserShortcutKeys(shortcutsLists, callback) {
         this.ctrlKey = false;
         this.altKey = false;
         this.shiftKey = false;
-        this.meta = false; //Mac's command key
+        this.metaKey = false; //Mac's command key
     }
 
     /**
@@ -163,7 +178,7 @@ function disableBrowserShortcutKeys(shortcutsLists, callback) {
                     && event.ctrlKey == this.keyInfoList[i].ctrlKey
                     && event.shiftKey == this.keyInfoList[i].shiftKey
                     && event.altKey == this.keyInfoList[i].altKey
-                    && (event.meta == undefined || event.meta == this.keyInfoList[i].meta)) {
+                    && (event.metaKey === undefined || event.metaKey == this.keyInfoList[i].metaKey)) {
                     return this.keyInfoList[i];
                 }
             }
@@ -211,6 +226,8 @@ function disableBrowserShortcutKeys(shortcutsLists, callback) {
             browserName = 'chrome';
         } else if (userAgent.indexOf('firefox') != -1){
             browserName = 'firefox';
+        } else if (userAgent.indexOf('safari') != -1){
+            browserName = 'safari';
         }
         return browserName;
     }
@@ -224,21 +241,10 @@ function disableBrowserShortcutKeys(shortcutsLists, callback) {
         var code;
         if (event.keyCode) code = event.keyCode;
         else if (event.which) code = event.which;
-        /*if(code == 188 && event.shiftKey) return "<"; //If the user presses , when the type is onkeydown
-        if(code == 188) return ","; //If the user presses , when the type is onkeydown
-        if(code == 190 && event.shiftKey) return ">"; //If the user presses , when the type is onkeydown
-        if(code == 190) return "."; //If the user presses , when the type is onkeydown
-        if(code == 189 && event.shiftKey == true) return "="; //If the user presses , when the type is onkeydown
-        if(code == 189) return "-"; //If the user presses , when the type is onkeydown
-        if(code == 220 && event.shiftKey == true) return "|"; //If the user presses , when the type is onkeydown
-        if(code == 220) return "\\"; //If the user presses , when the type is onkeydown
-        if(code == 226 && event.shiftKey == true) return "\\"; //If the user presses , when the type is onkeydown
-        if(code == 226) return "_"; //If the user presses , when the type is onkeydown
-        if(code == 222 && event.shiftKey == true) return "~"; //If the user presses , when the type is onkeydown
-        if(code == 222) return "^"; //If the user presses , when the type is onkeydown*/
         for(var key in special_keys){
             if(special_keys[key] === code) return key +"";
         }
+        if(special_chars[code] != undefined) return special_chars[code];
         var character = String.fromCharCode(code).toLowerCase();
         if(shift_nums[character] && event.shiftKey) //Stupid Shift key bug created by using lowercase
             return shift_nums[character];
@@ -266,7 +272,14 @@ function disableBrowserShortcutKeys(shortcutsLists, callback) {
                     keyInfo.shiftKey = true;
                     break;
                 case "alt":
+                case "option":
+                case "⌥":
                     keyInfo.altKey = true;
+                    break;
+                case "meta":
+                case "command":
+                case "⌘":
+                    keyInfo.metaKey = true;
                     break;
                 default :
                     if (key.length > 1) { //If it is a special key
