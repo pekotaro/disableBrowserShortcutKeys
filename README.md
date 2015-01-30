@@ -15,7 +15,7 @@ disableBrowserShortcutKeys({
 		'Ctrl+C',  
 		'F12'  
 	],  
-	'firefox':[  
+	'firefox' : [  
 		'F5',  
 		'Ctrl+C',  
 		'Ctrl+Shift+I',  
@@ -45,6 +45,6 @@ disableBrowserShortcutKeys({
 		'F12'  
 	]
 },function(){
-    alert('Disable shortcut is pressed.');
+    alert('Disabled shortcut is pressed.');
 });  
 ```
