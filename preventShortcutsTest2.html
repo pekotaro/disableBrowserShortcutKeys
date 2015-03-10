@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head lang="en">
+    <script type="text/javascript" src="jquery-1.11.2.js"></script>
+    <script type="text/javascript" src="common.js"></script>
+    <meta charset="UTF-8">
+    <title></title>
+</head>
+<body>
+<input type="text" value="inputPrevent2"/>
+<p>
+preventShortcutsTest2.html
+</p>
+<a href="preventShortcutsTest.html">リンク</a><br><br>
+<a href="noPrevent.html">抑止なし</a>
+<script>
+
+    document.onkeydown = KeyDown;
+//    document.onkeydown = function(e) {
+//
+//        preventShortcuts = {
+//            "Single": ["F5"],
+//            "Ctrl":[],
+//            "Shift":[],
+//            "Alt":['F4']
+//        };
+//        if (!e) e = window.event;
+//        var target = e.target || e.srcElement;
+//        var strEventType = target.type;
+//        var readonly = target.getAttribute('readonly');
+//        if ((e.altKey && charCode == 37) ||   // Alt + ←
+//                (e.altKey && charCode == 39)) {   // Alt + →
+//            e.returnValue = false;
+//        }
+//        var charCode = e.charCode || e.keyCode
+//        if ((e.altKey && charCode == 13) ||  //Alt + Enter
+//                (e.altKey && charCode == 115) ||  // Alt + F4
+//                (e.ctrlKey && charCode == 115)) {  // Ctrl + F4
+//            e.returnValue = false;
+//            e.cancelBubble = true;
+//            e.keyCode = 37; // or 39
+//            return false;
+//        }
+//    }
+</script>
+</body>
+</html>

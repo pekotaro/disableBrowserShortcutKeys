@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html>
+<head lang="en">
+    <script type="text/javascript" src="disableBrowserShortcutKeys.js"></script>
+    <meta charset="UTF-8">
+    <title></title>
+</head>
+<body>
+<input type="text" value="inputPrevent1"/>
+<p>
+preventShortcutsTest1.html
+</p>
+<a href="preventShortcutsTest2.html">リンク</a>
+<script>
+
+    var shortcutBlackList = {
+        'FireFox' : [
+            'Alt+→',
+            'Shift+Backspace',
+            'Alt+←',
+            'BackSpace',
+            'F5',
+            'Ctrl+R',
+            'Alt+Home',
+            'Ctrl+D',
+            'Ctrl+Shift+B',
+            'Ctrl+Shift+O',
+            'Ctrl+H',
+            'Ctrl+Shift+H',
+            'Ctrl+J',
+            'Ctrl+Shift+Y',
+            'Ctrl+S',
+            'Ctrl+K',
+            'Ctrl+E',
+            'Ctrl+N',
+            'Ctrl+Shift+P',
+            'Ctrl+T',
+            'Ctrl+Shift+W',
+            'Alt+F4',
+            'Ctrl+W',
+            'Ctrl+F4',
+            'F11',
+            'F12',
+            'Ctrl+Shift+I',
+            'F7',
+            'Shift+Enter',
+            'Ctrl+U',
+            'Ctrl+F5',
+            'Ctrl+Shift+R',
+            'Ctrl+Shift+D',
+            'Ctrl+B',
+            'Ctrl+I',
+            'Ctrl+Shift+K',
+            'Ctrl+Shift+C',
+            'Ctrl+Shift+S',
+            'Shift+F7',
+            'Shift+F5',
+            'Ctrl+Shift+Q',
+            'Shift+F2',
+            'Ctrl+Shift+M',
+            'Shift+F4',
+            'Ctrl+Shift+J',
+            'Ctrl+I',
+            'F6',
+            'Alt+D',
+            'Ctrl+L'
+        ],
+        'Chrome' : [
+            'Shift+BackSpace',
+            'Alt+→',
+            'BackSpace',
+            'Alt+←',
+            'F5',
+            'Ctrl+R',
+            'Alt+Home',
+            'Ctrl+D',
+            'Ctrl+Shift+B',
+            'Ctrl+H',
+            'Ctrl+J',
+            'Ctrl+S',
+            'F1',
+            'F11',
+            'Ctrl+Shift+J',
+            'Enter',
+            'Shift+Enter',
+            'Ctrl+U',
+            'Ctrl+F5',
+            'Shift+F5',
+            'Ctrl+Shift+D',
+            'Shift+Alt+T',
+            'F6',
+            'Shift+F6',
+            'Ctrl+L',
+            'Alt+D',
+            'Ctrl+X',
+            'Shift+Del',
+            'Ctrl+E',
+            'Ctrl+K'
+        ],
+        'IE9' :[
+            'Alt+→',
+            'Alt+←',
+            'BackSpace',
+            'F5',
+            'Alt+Home',
+            'Ctrl+B',
+            'Ctrl+D',
+            'Ctrl+I',
+            'Ctrl+H',
+            'Ctrl+H',
+            'Ctrl+J',
+            'Ctrl+S',
+            'F4',
+            'Alt+Enter',
+            'Ctrl+E',
+            'Ctrl+N',
+            'Ctrl+Shift+L',
+            'Ctrl+Shift+P',
+            'Ctrl+T',
+            'Ctrl+W',
+            'Alt+F4"',
+            'Ctrl+W',
+            'F1',
+            'F11',
+            'F12',
+            'F7',
+            'Shift+F10'
+        ],
+        'IE10' :[
+            'Alt+→',
+            'BackSpace',
+            'Alt+←',
+            'F5',
+            'Alt+Home',
+            'Ctrl+B',
+            'Ctrl+D',
+            'Ctrl+I',
+            'Alt+C"',
+            'Ctrl+H',
+            'Ctrl+H',
+            'Ctrl+J',
+            'Ctrl+S',
+            'F4',
+            'Ctrl+E',
+            'Ctrl+N',
+            'Ctrl+Shift+L',
+            'Ctrl+Shift+P',
+            'Ctrl+T',
+            'Ctrl+W',
+            'Alt+F4"',
+            'Ctrl+W',
+            'F1',
+            'F11',
+            'F12',
+            'F7',
+            'Shift+F10',
+            'Ctrl+F4',
+            'Altl+D',
+            'Shift+Enter',
+            'Ctrl+U'
+        ],
+        'Safari' : [
+            '⌘+Home', //ホームページに移動する。
+            '⌘+Shift+H', //フルスクリーンビューを終了する
+            'Delete',
+            '⌘+[',
+            '⌘+]',
+            'Shift+⌘+D',
+            '⌘+⌥+1',
+            '⌘+C',
+            '⌘+D',
+            '⌘+E',
+            '⌘+I',
+            '⌘+L',
+            '⌘+N',
+            '⌘+Q',
+            '⌘+R',
+            '⌘+S',
+            '⌘+Shift+S',
+            '⌘+T',
+            '⌘+W',
+            '⌘+Shit+B',
+            '⌘+Shit+I',
+            '⌘+Shit+W',
+            '⌘+⌥+B',
+            '⌘+⌥+F',
+            '⌘+⌥+L', //ダウンロードウインドウを表示
+            '⌘+⌥+K', //検索エンジンでの検索結果ページをSnapBackへ登録
+            '⌘+⌥+S', //SnapBackで検索結果ページに戻る
+            '⌘+⌥+W',
+            '⌘+⌥+Shift+W' // 全てのウィンドウを閉じる
+        ]
+    };
+
+    disableBrowserShortcutKeys(shortcutBlackList, function (browserName) {
+        //alert(browserName);
+    });
+//    document.onkeydown = function(e) {
+//
+//        preventShortcuts = {
+//            "Single": ["F5"],
+//            "Ctrl":[],
+//            "Shift":[],
+//            "Alt":['F4']
+//        };
+//        if (!e) e = window.event;
+//        var target = e.target || e.srcElement;
+//        var strEventType = target.type;
+//        var readonly = target.getAttribute('readonly');
+//        if ((e.altKey && charCode == 37) ||   // Alt + ←
+//                (e.altKey && charCode == 39)) {   // Alt + →
+//            e.returnValue = false;
+//        }
+//        var charCode = e.charCode || e.keyCode
+//        if ((e.altKey && charCode == 13) ||  //Alt + Enter
+//                (e.altKey && charCode == 115) ||  // Alt + F4
+//                (e.ctrlKey && charCode == 115)) {  // Ctrl + F4
+//            e.returnValue = false;
+//            e.cancelBubble = true;
+//            e.keyCode = 37; // or 39
+//            return false;
+//        }
+//    }
+</script>
+</body>
+</html>
