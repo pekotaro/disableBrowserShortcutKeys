@@ -1,17 +1,14 @@
 /**
- * Created by Takuro on 2015/01/24.
+ * ブラウザのショートカットキーの動作を抑制する。
+ *
+ * @param shortcutBlackList 止めたいショートカットキーのリスト ex... { 'Windows': {'IE9': ['Ctrl+C', 'Alt+Left'], 'Chrome':['F5', 'Ctrl+Pageup']}, 'Mac' : 'safari':{'Command+R'} }
+ * @param callback 抑制対象に指定されたキーが入力された場合に実行されるコールバック関数。 この関数内でfalseを返せば、抑制を取りやめる（デフォルトの動作が実行される）。
  */
 function disableBrowserShortcutKeys(shortcutBlackList, callback) {
 
-    // issues memo wrote by my native language.
-    // TODO targetがinput だった場合の処理分けをちゃんと整理する。disable時など
     // TODO mac:safari対応・動作確認
-    // TODO:記号対策 shift+1は(shift+1, shift+!)とか複数パターンの書き方に対応する。
     // TODO:全browserの共通キーを指定できるようにする
-
-    //Special Keys - and their codes
-    // TODO: make work multiple pattern of special keys. Now, only first pattern works.
-    var nonAlphabetics_keys = {
+    var NON_ALPHABETIC_KEYCODE_MAP = {
         186: ':',
         187: ';',
         188: ',',
@@ -68,37 +65,50 @@ function disableBrowserShortcutKeys(shortcutBlackList, callback) {
         metaKey : ['meta', 'command', '⌘']
     };
 
+    var BACKSPACE_EXCEPTIONAL_INPUT_TYPE = [
+        'text',
+        'password',
+        'date',
+        'datetime',
+        'datetime-local',
+        'email',
+        'month',
+        'number',
+        'range',
+        'search',
+        'tel',
+        'time',
+        'url',
+        'week'
+    ];
+
+    //コールバック関数の引数にするための、指定されたままの(toLowerCaseされていない)状態のブラウザ名とOS名
     var originalBrowserName;
+    var originalOsName;
 
     /**
-     * main method
-     * set eventListener to prevent default operation.
+     * メイン関数
+     * 指定されたショートカットキーの動作を抑制するイベントリスナーを、ウィンドウに追加する。
      */
     !function () {
-        var browserName = getBrowserName();
-        var nonParsedBlackList = selectBlackListForThisBrowser(shortcutBlackList, browserName);
-        if (nonParsedBlackList == undefined || nonParsedBlackList.length == 0) return;
+        var nonParsedBlackList = selectBlackListForThisEnvironment(shortcutBlackList);
+        if (nonParsedBlackList === undefined || nonParsedBlackList.length === 0) return;
 
         var parsedBlackList = new ShortcutBlackList(nonParsedBlackList);
         var eventListener = function (e) {
+            //例外的なパターンを抑制対象から除外。テキストエリア内でのBackspaceなど。
+            if(isExceptionalPattern(e)) return;
 
             var keyInfo = parsedBlackList.findKeyInfoByEvent(e);
             if (keyInfo == null) return;
 
-            var targetTagName = getEventTargetTagName(e);
-            switch (keyInfo.mainKey) {
-                case "backspace":
-                    if (targetTagName == 'INPUT' || targetTagName == 'TEXTAREA')return;
-                    break;
-                case "enter":
-                    if (targetTagName == 'TEXTAREA')return;
-                    break;
+            if (callback) {
+                var isCanceled = callback(originalBrowserName, keyInfo.original, e) === false;
+                if(isCanceled) return;
             }
-
             if (e.preventDefault) e.preventDefault();
             if (e.stopPropagation) e.stopPropagation();
             else e.returnValue = false;
-            if (callback) callback(originalBrowserName, keyInfo.original, e);
             return false;
         };
 
@@ -114,11 +124,10 @@ function disableBrowserShortcutKeys(shortcutBlackList, callback) {
      * @constructor
      */
     function KeyInfoToDisable(nonParsedShortcut) {
-
         this.original = nonParsedShortcut;
 
         var keys = nonParsedShortcut.toLowerCase().split("+");
-        this.mainKey = findMainKey(keys);
+        this.keyName = findMainKeyName(keys);
         this.ctrlKey = containsCtrl(keys);
         this.altKey = containsAlt(keys);
         this.shiftKey = containsShift(keys);
@@ -126,12 +135,16 @@ function disableBrowserShortcutKeys(shortcutBlackList, callback) {
 
         this.matchWithEvent = function(event){
             var keyCode = extractKeyCodeByEvent(event);
-            var pressedKeyName = convertKeyCodeToKeyName(keyCode);
-            return ((pressedKeyName === this.mainKey || (pressedKeyName instanceof Array && pressedKeyName.indexOf(this.mainKey) != -1))
-                && event.ctrlKey == this.ctrlKey
-                && event.shiftKey == this.shiftKey
-                && event.altKey == this.altKey
-                && (event.metaKey === undefined || event.metaKey == this.metaKey))
+            return this.matchKeyByKeyCode(keyCode)
+                && event.ctrlKey === this.ctrlKey
+                && event.shiftKey === this.shiftKey
+                && event.altKey === this.altKey
+                && (event.metaKey === undefined || event.metaKey === this.metaKey)
+        };
+
+        this.matchKeyByKeyCode = function (keyCode){
+            var keyName = convertKeyCodeToKeyName(keyCode);
+            return keyName === this.keyName || (keyName instanceof Array && keyName.indexOf(this.keyName) !== -1)
         };
 
         function containsCtrl(keys){
@@ -157,7 +170,7 @@ function disableBrowserShortcutKeys(shortcutBlackList, callback) {
             return false;
         }
 
-        function findMainKey(keys){
+        function findMainKeyName(keys){
             for(var k in keys)if( keys.hasOwnProperty(k)){
                 if(!isModifierKey(keys[k])) return keys[k];
             }
@@ -174,6 +187,7 @@ function disableBrowserShortcutKeys(shortcutBlackList, callback) {
 
     /**
      * ショートカットキーの抑止対象リスト
+     * @param nonParsedShortcuts
      * @constructor
      */
     function ShortcutBlackList(nonParsedShortcuts) {
@@ -190,33 +204,50 @@ function disableBrowserShortcutKeys(shortcutBlackList, callback) {
             }
             return null;
         };
-        for (var key in nonParsedShortcuts) {
+
+        for (var key in nonParsedShortcuts) if (nonParsedShortcuts.hasOwnProperty(key)){
             this.push(new KeyInfoToDisable(nonParsedShortcuts[key]));
         }
     }
 
     /**
-     * get target element's name of event.
+     * イベントのターゲット要素を取得する。
      * @param event
      * @returns {string}
      */
-    function getEventTargetTagName(event) {
+    function getEventTargetElement(event) {
         var element;
         if (event.target) element = event.target;
         else if (event.srcElement) element = event.srcElement;
         if (element.nodeType == 3) element = element.parentNode;
-        return element.tagName;
+        return element;
     }
 
     /**
-     *
+     * 入力されたショートカットキーのリストから、
+     * 実行中の環境のリストを選び出す。
      * @param shortcutsLists
-     * @param browserName
      * @returns {*}
      */
-    function selectBlackListForThisBrowser(shortcutsLists, browserName) {
-        for (var key in shortcutsLists) {
-            if ((key + "").toLowerCase() == browserName) {
+    function selectBlackListForThisEnvironment(shortcutsLists) {
+        var os = getOsName();
+        var blackListForThisOs = selectBlackListForThisOs(shortcutsLists, os);
+        var browser = getBrowserName();
+        return selectBlackListForThisBrowser(blackListForThisOs, browser);
+    }
+
+    function selectBlackListForThisOs(shortcutsLists, os){
+        for (var key in shortcutsLists) if(shortcutsLists.hasOwnProperty(key)) {
+            if ((key + "").toLowerCase() === os) {
+                originalOsName = key;
+                return shortcutsLists[key];
+            }
+        }
+    }
+
+    function selectBlackListForThisBrowser(shortcutsLists, browser){
+        for (var key in shortcutsLists) if(shortcutsLists.hasOwnProperty(key)) {
+            if ((key + "").toLowerCase() === browser) {
                 originalBrowserName = key;
                 return shortcutsLists[key];
             }
@@ -224,6 +255,10 @@ function disableBrowserShortcutKeys(shortcutBlackList, callback) {
         return null;
     }
 
+    /**
+     * 実行中のブラウザ名を取得する。
+     * @returns {string}
+     */
     function getBrowserName() {
         var userAgent = window.navigator.userAgent.toLowerCase(),
             appVersion = window.navigator.appVersion.toLowerCase();
@@ -245,12 +280,25 @@ function disableBrowserShortcutKeys(shortcutBlackList, callback) {
     }
 
     /**
-     * キーコードを。対応するキー名に変換する。
+     * 実行中のOS名を取得する。
+     * @returns {string}
+     */
+    function getOsName(){
+        if(window.navigator.userAgent.indexOf("Win") != -1 ){
+            return 'win';
+        }
+        if(window.navigator.userAgent.indexOf("Mac") != -1 ){
+            return 'mac'
+        }
+    }
+
+    /**
+     * キーコードを対応するキー名に変換する。
      * @param keyCode
      * @returns {string}
      */
     function convertKeyCodeToKeyName(keyCode) {
-        if (nonAlphabetics_keys[keyCode]) return nonAlphabetics_keys[keyCode];
+        if (NON_ALPHABETIC_KEYCODE_MAP[keyCode]) return NON_ALPHABETIC_KEYCODE_MAP[keyCode];
         return String.fromCharCode(keyCode).toLowerCase();
     }
 
@@ -262,5 +310,25 @@ function disableBrowserShortcutKeys(shortcutBlackList, callback) {
     function extractKeyCodeByEvent(event) {
         if(event.keyCode) return event.keyCode;
         else if(event.which) return event.which;
+    }
+
+    /**
+     * 抑制対象とすべきでないパターンかどうかを判定する。
+     * 例：入力フォーム内でのBackspace
+     * @param event
+     * @returns {boolean}
+     */
+    function isExceptionalPattern(event){
+        var keyCode = extractKeyCodeByEvent(event);
+        var keyName = convertKeyCodeToKeyName(keyCode);
+        var target = getEventTargetElement(event);
+        if(keyName.indexOf('backspace') !== -1 ) {
+            if(target.tagName === 'TEXTAREA' && target.readOnly == false) return true;
+            //INPUTタグ内で入力された時は、　テキスト入力可能なタグでのみBackSpaceを有効にする(buttonなどは抑止)。
+            if (target.tagName === 'INPUT' && target.readOnly == false && BACKSPACE_EXCEPTIONAL_INPUT_TYPE.indexOf(target.type) !== -1) return true;
+        }else if(keyName.indexOf('enter') !== -1){
+            if (target === 'TEXTAREA' && target.readOnly == false) return true;
+        }
+        return false;
     }
 }
