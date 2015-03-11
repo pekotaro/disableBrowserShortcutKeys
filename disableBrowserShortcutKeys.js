@@ -42,7 +42,7 @@ function disableBrowserShortcutKeys(shortcutBlackList, callback) {
         33: ['pageup', 'page_up', 'pu'],
         34: ['pagedown', 'page_down', 'pd'],
 
-        37: ['←', 'left',],
+        37: ['←', 'left'],
         38: ['↑', 'up'],
         39: ['→', 'right'],
         40: ['↓', 'down'],
@@ -62,9 +62,9 @@ function disableBrowserShortcutKeys(shortcutBlackList, callback) {
     };
 
     var MODIFIER_KEYS_NAMES = {
-        ctrlKey : ['ctrl', 'control'],
+        ctrlKey : ['ctrl', 'control', '⌃'],
         altKey : ['alt', 'option', '⌥'],
-        shiftKey : ['shift'],
+        shiftKey : ['shift', '⇧'],
         metaKey : ['meta', 'command', '⌘']
     };
 
@@ -76,29 +76,29 @@ function disableBrowserShortcutKeys(shortcutBlackList, callback) {
      */
     !function () {
         var browserName = getBrowserName();
-        var nonParsedBlackList = sortoutBlackListForThisBrowser(shortcutBlackList, browserName);
+        var nonParsedBlackList = selectBlackListForThisBrowser(shortcutBlackList, browserName);
         if (nonParsedBlackList == undefined || nonParsedBlackList.length == 0) return;
 
         var parsedBlackList = new ShortcutBlackList(nonParsedBlackList);
         var eventListener = function (e) {
-            var keyInfo = parsedBlackList.getMatchedKeyInfoByEvent(e);
+
+            var keyInfo = parsedBlackList.findKeyInfoByEvent(e);
             if (keyInfo == null) return;
 
-            var targetTag = getEventTargetTag(e);
+            var targetTagName = getEventTargetTagName(e);
             switch (keyInfo.mainKey) {
                 case "backspace":
-                    //TODO: sort out when input type="text" other Pattern
-                    if (targetTag == 'INPUT' || targetTag == 'TEXTAREA')return;
+                    if (targetTagName == 'INPUT' || targetTagName == 'TEXTAREA')return;
                     break;
                 case "enter":
-                    if (targetTag == 'TEXTAREA')return;
+                    if (targetTagName == 'TEXTAREA')return;
                     break;
             }
 
             if (e.preventDefault) e.preventDefault();
             if (e.stopPropagation) e.stopPropagation();
             else e.returnValue = false;
-            if (callback) callback(originalBrowserName, keyInfo.original, e); //TODO; set browserName in original format. Now, it's set after called toLowerCase();
+            if (callback) callback(originalBrowserName, keyInfo.original, e);
             return false;
         };
 
@@ -124,6 +124,16 @@ function disableBrowserShortcutKeys(shortcutBlackList, callback) {
         this.shiftKey = containsShift(keys);
         this.metaKey = containsMeta(keys); //Mac's command key
 
+        this.matchWithEvent = function(event){
+            var keyCode = extractKeyCodeByEvent(event);
+            var pressedKeyName = convertKeyCodeToKeyName(keyCode);
+            return ((pressedKeyName === this.mainKey || (pressedKeyName instanceof Array && pressedKeyName.indexOf(this.mainKey) != -1))
+                && event.ctrlKey == this.ctrlKey
+                && event.shiftKey == this.shiftKey
+                && event.altKey == this.altKey
+                && (event.metaKey === undefined || event.metaKey == this.metaKey))
+        };
+
         function containsCtrl(keys){
             return haveCommonValue(keys, MODIFIER_KEYS_NAMES.ctrlKey);
         }
@@ -141,21 +151,21 @@ function disableBrowserShortcutKeys(shortcutBlackList, callback) {
         }
 
         function haveCommonValue(array1, array2){
-            for(var key in array1){
+            for(var key in array1) if(array1.hasOwnProperty(key)){
                 if(array2.indexOf(array1[key]) !== -1) return true;
             }
             return false;
         }
 
         function findMainKey(keys){
-            for(var k in keys){
+            for(var k in keys)if( keys.hasOwnProperty(k)){
                 if(!isModifierKey(keys[k])) return keys[k];
             }
             return null;
         }
 
         function isModifierKey(key){
-            for(var k in MODIFIER_KEYS_NAMES ){
+            for(var k in MODIFIER_KEYS_NAMES )if( MODIFIER_KEYS_NAMES.hasOwnProperty(k)){
                 if(MODIFIER_KEYS_NAMES[k].indexOf(key) !== -1) return true;
             }
             return false;
@@ -174,18 +184,9 @@ function disableBrowserShortcutKeys(shortcutBlackList, callback) {
             this.blackList.push(keyInfo);
         };
 
-        this.getMatchedKeyInfoByEvent = function (event) {
-            var mainKeyPressed = generateStringOfPressedKey(event);
-            for (var i in this.blackList) {
-                if (this.blackList.hasOwnProperty(i)
-                    && this.blackList[i] instanceof KeyInfoToDisable
-                    && (mainKeyPressed === this.blackList[i].mainKey || (mainKeyPressed instanceof Array && mainKeyPressed.indexOf(this.blackList[i].mainKey) != -1))
-                    && event.ctrlKey == this.blackList[i].ctrlKey
-                    && event.shiftKey == this.blackList[i].shiftKey
-                    && event.altKey == this.blackList[i].altKey
-                    && (event.metaKey === undefined || event.metaKey == this.blackList[i].metaKey)) {
-                    return this.blackList[i];
-                }
+        this.findKeyInfoByEvent = function (event) {
+            for (var i in this.blackList) if (this.blackList.hasOwnProperty(i)){
+                if(this.blackList[i].matchWithEvent(event)) return this.blackList[i];
             }
             return null;
         };
@@ -199,7 +200,7 @@ function disableBrowserShortcutKeys(shortcutBlackList, callback) {
      * @param event
      * @returns {string}
      */
-    function getEventTargetTag(event) {
+    function getEventTargetTagName(event) {
         var element;
         if (event.target) element = event.target;
         else if (event.srcElement) element = event.srcElement;
@@ -213,7 +214,7 @@ function disableBrowserShortcutKeys(shortcutBlackList, callback) {
      * @param browserName
      * @returns {*}
      */
-    function sortoutBlackListForThisBrowser(shortcutsLists, browserName) {
+    function selectBlackListForThisBrowser(shortcutsLists, browserName) {
         for (var key in shortcutsLists) {
             if ((key + "").toLowerCase() == browserName) {
                 originalBrowserName = key;
@@ -225,36 +226,41 @@ function disableBrowserShortcutKeys(shortcutBlackList, callback) {
 
     function getBrowserName() {
         var userAgent = window.navigator.userAgent.toLowerCase(),
-            appVersion = window.navigator.appVersion.toLowerCase(),
-            browserName;
+            appVersion = window.navigator.appVersion.toLowerCase();
         if (userAgent.indexOf('msie') != -1) {
             if (appVersion.indexOf('msie 9.') != -1) {
-                browserName = 'ie9';
+                return 'ie9';
             } else if (appVersion.indexOf('msie 10.') != -1) {
-                browserName = 'ie10';
+                return 'ie10';
+            } else if (appVersion.indexOf('msie 11.') != -1) {
+                return 'ie11';
             }
         } else if (userAgent.indexOf('chrome') != -1) {
-            browserName = 'chrome';
+            return'chrome';
         } else if (userAgent.indexOf('firefox') != -1) {
-            browserName = 'firefox';
+            return 'firefox';
         } else if (userAgent.indexOf('safari') != -1) {
-            browserName = 'safari';
+            return 'safari';
         }
-        return browserName;
     }
 
     /**
-     * //FIXME Incomplete when the special character(exp. "+", "*", "{" ) is pressed.
+     * キーコードを。対応するキー名に変換する。
      * @param keyCode
      * @returns {string}
      */
-    function generateStringOfPressedKey(event) {
-        var code;
-        if (event.keyCode) code = event.keyCode;
-        else if (event.which) code = event.which;
+    function convertKeyCodeToKeyName(keyCode) {
+        if (nonAlphabetics_keys[keyCode]) return nonAlphabetics_keys[keyCode];
+        return String.fromCharCode(keyCode).toLowerCase();
+    }
 
-        if (nonAlphabetics_keys[code]) return nonAlphabetics_keys[code];
-        var character = String.fromCharCode(code).toLowerCase();
-        return character;
+    /**
+     * イベントオブジェクトからキーコードを抽出する。
+     * @param event
+     * @returns {*}
+     */
+    function extractKeyCodeByEvent(event) {
+        if(event.keyCode) return event.keyCode;
+        else if(event.which) return event.which;
     }
 }
